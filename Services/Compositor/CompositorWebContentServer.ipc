@@ -90,6 +90,12 @@ endpoint CompositorWebContentServer
     webgl_read_pixels(Compositing::CanvasId canvas_id, i32 x, i32 y, i32 width, i32 height, u32 format, u32 type, i32 buf_size, Core::AnonymousBuffer pixels) => (i32 length, i32 columns, i32 rows)
     webgl_read_buffer_sub_data(Compositing::CanvasId canvas_id, u32 target, i64 offset, i64 size, Core::AnonymousBuffer data) => (bool success)
 
+    // WebGPU: the bytes are webgpu_wire commands (Libraries/LibWebGPU/Wire), which the compositor executes with the
+    // GPU, and answers with webgpu_events(). A canvas presents the frame it drew last, which the compositor reads back.
+    webgpu_create_canvas() => (Compositing::CanvasId canvas_id)
+    webgpu_commands(ByteBuffer commands) =|
+    webgpu_present_canvas(Compositing::CanvasId canvas_id) =|
+
     [RustReceiver] invalidate_wheel_event_listener_state(Web::CompositorContextId context_id, u64 generation) =|
     [RustReceiver] invalidate_keyboard_scroll_state(Web::CompositorContextId context_id, u64 generation) => ()
     [RustReceiver] take_wheel_event_from_main_thread(Web::CompositorContextId context_id, Web::MouseEvent event, Compositing::AsyncScrollOperationTracking operation_tracking, Compositing::WheelEventRouting routing) => (Compositing::WheelEventAnswer answer)

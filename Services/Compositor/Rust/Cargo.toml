@@ -18,6 +18,7 @@ libcompositing_rust = { path = "../../../Libraries/LibCompositing/Rust" }
 libgfx_rust = { path = "../../../Libraries/LibGfx/Rust", default-features = false }
 libipc_rust = { path = "../../../Libraries/LibIPC/Rust" }
 rustc-demangle = "0.1"
+webgpu_host = { path = "../WebGPU" }
 
 [build-dependencies]
 cbindgen = "0.29"

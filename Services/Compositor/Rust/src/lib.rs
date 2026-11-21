@@ -12,6 +12,9 @@ extern crate ladybird_allocator;
 #[path = "../../../../Libraries/RustDemangle.rs"]
 mod rust_demangle;
 
+// The WebGPU host exports a C ABI that Services/Compositor/CanvasHost.cpp calls; naming the crate links it in.
+pub use webgpu_host;
+
 #[path = "../../../../Libraries/RustPanic.rs"]
 mod rust_panic;
 

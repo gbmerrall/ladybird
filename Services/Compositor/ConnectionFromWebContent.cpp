@@ -464,6 +464,27 @@ void ConnectionFromWebContent::webgl_clear_drawing_buffer(Compositing::CanvasId 
     m_canvas_host.clear_webgl_drawing_buffer(canvas_id);
 }
 
+Messages::CompositorWebContentServer::WebgpuCreateCanvasResponse ConnectionFromWebContent::webgpu_create_canvas()
+{
+    return m_canvas_host.create_webgpu_canvas();
+}
+
+void ConnectionFromWebContent::webgpu_commands(ByteBuffer commands)
+{
+    ByteBuffer events;
+    if (!m_canvas_host.execute_webgpu_commands(commands, events)) {
+        did_misbehave("WebContent sent malformed WebGPU commands");
+        return;
+    }
+    if (!events.is_empty())
+        async_webgpu_events(events);
+}
+
+void ConnectionFromWebContent::webgpu_present_canvas(Compositing::CanvasId canvas_id)
+{
+    m_canvas_host.present_webgpu_canvas(canvas_id);
+}
+
 Messages::CompositorWebContentServer::WebglSyncCallResponse ConnectionFromWebContent::webgl_sync_call(Compositing::CanvasId canvas_id, ByteBuffer request)
 {
     return MUST(m_canvas_host.execute_webgl_sync_call(canvas_id, move(request)));
@@ -526,6 +547,8 @@ void ConnectionFromWebContent::request_screenshot(Web::CompositorContextId conte
 {
     if (!context_is_owned_by_this_connection(context_id))
         return;
+    // NB: The page's WebGPU canvases show their frames once those are back from the GPU, which a screenshot waits for.
+    m_canvas_host.wait_for_webgpu_frames();
     if (m_compositor_state->request_screenshot(context_id, target_bitmap))
         async_did_complete_screenshot(request_id);
     else

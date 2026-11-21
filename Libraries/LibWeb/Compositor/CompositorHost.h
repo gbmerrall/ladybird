@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <AK/ByteBuffer.h>
 #include <AK/Function.h>
 #include <AK/HashMap.h>
 #include <AK/Noncopyable.h>
@@ -134,6 +135,17 @@ public:
     void discard_canvas_2d_stream();
 
     RefPtr<WebGL::RemoteWebGLTransport> create_webgl_transport();
+
+    // WebGPU, which Bindings/Rust/src/web_gpu drives. These do nothing, or return nothing, without a compositor.
+    // NB: WebContent hears of its compositor only after the compositor starts, so the first script of a new browser
+    //     can run before then. Requests for adapters wait for the connection in tasks of their own.
+    bool has_compositor_connection() const { return compositor_connection(); }
+    Optional<Compositing::CanvasId> create_webgpu_canvas();
+    // Commands are batched, and go to the compositor at the end of the current turn of the event loop, before a canvas
+    // presents, or once there are many of them.
+    void send_webgpu_commands(ReadonlyBytes);
+    void flush_webgpu_commands();
+    void present_webgpu_canvas(Compositing::CanvasId);
     RefPtr<HTML::RemoteCanvas2DTransport> create_canvas_2d_transport();
 
     Optional<PlaceholderCanvasLink> allocate_placeholder_canvas();
@@ -192,6 +204,9 @@ protected:
     virtual void context_was_destroyed(Web::CompositorContextId) { }
 
 private:
+    ByteBuffer m_pending_webgpu_commands;
+    bool m_webgpu_flush_is_scheduled { false };
+
     friend class CompositorContextHandle;
 
     HashMap<u64, AnimatedImageRegistration> m_animated_images;

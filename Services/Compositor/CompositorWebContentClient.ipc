@@ -23,4 +23,6 @@ endpoint CompositorWebContentClient
     remote_descendants_prepared_for_screenshot(u64 request_id) =|
     did_lose_compositor() =|
     placeholder_canvas_committed(Compositing::CanvasId canvas_id, Gfx::IntSize size, bool origin_clean) =|
+    // webgpu_wire events: replies to WebGPU requests, uncaptured errors, and lost devices.
+    webgpu_events(ByteBuffer events) =|
 }

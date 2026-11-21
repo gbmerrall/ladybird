@@ -6,6 +6,7 @@
 
 #include <AK/NonnullOwnPtr.h>
 #include <AK/Optional.h>
+#include <LibCore/EventLoop.h>
 #include <LibCompositing/DisplayList/Canvas2DCommandStream.h>
 #include <LibMediaCodecs/VideoFrame.h>
 #include <LibWeb/Compositor/CompositorConnection.h>
@@ -359,6 +360,55 @@ RefPtr<Web::WebGL::RemoteWebGLTransport> CompositorHost::create_webgl_transport(
     if (auto* connection = compositor_connection())
         return adopt_ref(*new CompositorRemoteWebGLTransport(*connection));
     return nullptr;
+}
+
+Optional<Compositing::CanvasId> CompositorHost::create_webgpu_canvas()
+{
+    flush_webgpu_commands();
+    if (auto* connection = compositor_connection())
+        return connection->create_webgpu_canvas();
+    return {};
+}
+
+void CompositorHost::send_webgpu_commands(ReadonlyBytes commands)
+{
+    // NB: A few megabytes keeps a frame that uploads a lot from building one huge message.
+    static constexpr size_t flush_threshold = 4 * MiB;
+
+    if (m_pending_webgpu_commands.try_append(commands).is_error()) {
+        flush_webgpu_commands();
+        if (auto* connection = compositor_connection())
+            connection->send_webgpu_commands(commands);
+        return;
+    }
+    if (m_pending_webgpu_commands.size() >= flush_threshold) {
+        flush_webgpu_commands();
+        return;
+    }
+    if (!m_webgpu_flush_is_scheduled) {
+        m_webgpu_flush_is_scheduled = true;
+        Core::deferred_invoke([weak_this = make_weak_ptr()] {
+            if (weak_this)
+                weak_this->flush_webgpu_commands();
+        });
+    }
+}
+
+void CompositorHost::flush_webgpu_commands()
+{
+    m_webgpu_flush_is_scheduled = false;
+    if (m_pending_webgpu_commands.is_empty())
+        return;
+    auto commands = move(m_pending_webgpu_commands);
+    if (auto* connection = compositor_connection())
+        connection->send_webgpu_commands(commands);
+}
+
+void CompositorHost::present_webgpu_canvas(Compositing::CanvasId canvas_id)
+{
+    flush_webgpu_commands();
+    if (auto* connection = compositor_connection())
+        connection->present_webgpu_canvas(canvas_id);
 }
 
 RefPtr<Web::HTML::RemoteCanvas2DTransport> CompositorHost::create_canvas_2d_transport()

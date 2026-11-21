@@ -83,6 +83,9 @@ private:
     virtual void webgl_present_canvas(Compositing::CanvasId canvas_id, bool preserve_drawing_buffer) override;
     virtual void webgl_clear_drawing_buffer(Compositing::CanvasId canvas_id) override;
     virtual Messages::CompositorWebContentServer::WebglSyncCallResponse webgl_sync_call(Compositing::CanvasId canvas_id, ByteBuffer request) override;
+    virtual Messages::CompositorWebContentServer::WebgpuCreateCanvasResponse webgpu_create_canvas() override;
+    virtual void webgpu_commands(ByteBuffer commands) override;
+    virtual void webgpu_present_canvas(Compositing::CanvasId canvas_id) override;
     virtual Messages::CompositorWebContentServer::WebglReadPixelsResponse webgl_read_pixels(Compositing::CanvasId canvas_id, i32 x, i32 y, i32 width, i32 height, u32 format, u32 type, i32 buf_size, Core::AnonymousBuffer pixels) override;
     virtual Messages::CompositorWebContentServer::WebglReadBufferSubDataResponse webgl_read_buffer_sub_data(Compositing::CanvasId canvas_id, u32 target, i64 offset, i64 size, Core::AnonymousBuffer data) override;
     virtual void synchronize_for_testing() override { }

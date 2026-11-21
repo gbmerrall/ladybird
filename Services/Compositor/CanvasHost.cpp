@@ -16,6 +16,8 @@
 #include <LibCompositing/CanvasSize.h>
 #include <LibCompositing/DisplayList/Canvas2DCommandStream.h>
 #include <LibCompositing/DisplayList/RegisteredImageFrames.h>
+#include <Compositor/WebGPUHostFFI.h>
+#include <LibCore/Timer.h>
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/ColorSpace.h>
 #include <LibMediaCodecs/VideoFrame.h>
@@ -47,6 +49,198 @@ CanvasHost::~CanvasHost()
 {
     for (auto canvas_id : m_contexts.keys())
         m_canvas_surface_registry.remove_canvas_surface(canvas_id);
+    for (auto canvas_id : m_webgpu_canvases.keys())
+        m_canvas_surface_registry.remove_canvas_surface(canvas_id);
+    if (m_webgpu_frame_timer)
+        m_webgpu_frame_timer->stop();
+    if (m_webgpu_host)
+        WebGPUFFI::webgpu_host_destroy(m_webgpu_host);
+}
+
+WebGPUFFI::WebGPUHost* CanvasHost::webgpu_host()
+{
+    // NB: The host starts wgpu, which loads the Vulkan driver, so only pages that use WebGPU pay for it.
+    if (!m_webgpu_host) {
+        m_webgpu_host = WebGPUFFI::webgpu_host_create();
+#ifdef USE_VULKAN_DMABUF_IMAGES
+        // NB: Canvases render into Skia's images when the WebGPU device is on Skia's GPU (Phase 8 of the roadmap),
+        //     and are read back otherwise.
+        if (m_skia_backend_context) {
+            VkPhysicalDeviceProperties properties {};
+            vkGetPhysicalDeviceProperties(m_skia_backend_context->vulkan_context().physical_device, &properties);
+            auto lend = [](void* context, u64 canvas_id, u32 width, u32 height, WebGPUFFI::WebGPUSharedImage* out_image) {
+                auto size = Gfx::IntSize { static_cast<int>(width), static_cast<int>(height) };
+                return static_cast<CanvasHost*>(context)->lend_webgpu_image(Compositing::CanvasId { canvas_id }, size, *out_image);
+            };
+            auto take_back = [](void* context, u64 canvas_id, u64 image) {
+                static_cast<CanvasHost*>(context)->take_back_webgpu_image(Compositing::CanvasId { canvas_id }, image);
+            };
+            WebGPUFFI::webgpu_host_set_image_source(m_webgpu_host, properties.vendorID, properties.deviceID, lend, take_back, this);
+        }
+#endif
+    }
+    return m_webgpu_host;
+}
+
+Compositing::CanvasId CanvasHost::create_webgpu_canvas()
+{
+    auto canvas_id = m_canvas_surface_registry.allocate_canvas_id();
+    m_webgpu_canvases.set(canvas_id, PresentableSurfacePool {});
+    return canvas_id;
+}
+
+bool CanvasHost::execute_webgpu_commands(ReadonlyBytes commands, ByteBuffer& out_events)
+{
+    auto store_events = [](void* context, u8 const* data, size_t length) {
+        auto buffer = ByteBuffer::copy(data, length);
+        if (!buffer.is_error())
+            *static_cast<ByteBuffer*>(context) = buffer.release_value();
+    };
+    return WebGPUFFI::webgpu_host_handle_commands(webgpu_host(), commands.data(), commands.size(), store_events, &out_events);
+}
+
+void CanvasHost::present_webgpu_canvas(Compositing::CanvasId canvas_id)
+{
+    if (!m_webgpu_canvases.contains(canvas_id) || !m_webgpu_host)
+        return;
+    // NB: This only starts reading the frame back from the GPU. The canvas shows it once it is back, which is usually
+    //     right away, and otherwise after the timer checks again.
+    if (!WebGPUFFI::webgpu_host_present(m_webgpu_host, canvas_id.value()))
+        return;
+    show_finished_webgpu_frames(false);
+}
+
+void CanvasHost::show_finished_webgpu_frames(bool wait)
+{
+    // FIXME: This reads the frame back from the GPU and uploads it again. The texture could instead be a VkImage that
+    //        Skia shares, as WebGL's drawing buffer is.
+    auto show_frame = [](void* context, u64 canvas_id, [[maybe_unused]] u64 image, u32 width, u32 height, bool is_bgra, u8 const* data, size_t length) {
+#ifdef USE_VULKAN_DMABUF_IMAGES
+        if (image != 0) {
+            static_cast<CanvasHost*>(context)->show_webgpu_image(Compositing::CanvasId { canvas_id }, image);
+            return;
+        }
+#endif
+        auto size = Gfx::IntSize { static_cast<int>(width), static_cast<int>(height) };
+        auto format = is_bgra ? Gfx::BitmapFormat::BGRA8888 : Gfx::BitmapFormat::RGBA8888;
+        auto bitmap = Gfx::Bitmap::create(format, Gfx::AlphaType::Premultiplied, size);
+        if (bitmap.is_error() || length < static_cast<size_t>(width) * height * 4)
+            return;
+        for (u32 y = 0; y < height; ++y)
+            memcpy(bitmap.value()->scanline_u8(static_cast<int>(y)), data + static_cast<size_t>(y) * width * 4, static_cast<size_t>(width) * 4);
+        static_cast<CanvasHost*>(context)->show_webgpu_frame(Compositing::CanvasId { canvas_id }, *bitmap.value());
+    };
+    bool frames_are_pending = WebGPUFFI::webgpu_host_take_frames(m_webgpu_host, wait, show_frame, this);
+    if (!frames_are_pending)
+        return;
+    if (!m_webgpu_frame_timer)
+        m_webgpu_frame_timer = Core::Timer::create_single_shot(AK::Duration::from_milliseconds(1), [this] { show_finished_webgpu_frames(false); });
+    if (!m_webgpu_frame_timer->is_active())
+        m_webgpu_frame_timer->start();
+}
+
+#ifdef USE_VULKAN_DMABUF_IMAGES
+// How many images a canvas renders into in turn at most. A canvas that has them all lent out is read back instead.
+static constexpr size_t maximum_webgpu_image_count = 6;
+
+bool CanvasHost::lend_webgpu_image(Compositing::CanvasId canvas_id, Gfx::IntSize size, WebGPUFFI::WebGPUSharedImage& out_image)
+{
+    if (!m_skia_backend_context || !m_webgpu_canvases.contains(canvas_id))
+        return false;
+    auto& images = m_webgpu_shared_images.ensure(canvas_id);
+    auto is_free = [](WebGPUSharedImage const& image) {
+        return !image.is_lent && (!image.shown_surface || (image.frames_shown_since >= 2 && !image.shown_surface->is_busy()));
+    };
+    auto fits = [&](WebGPUSharedImage const& image) {
+        return image.image->info.extent.width == static_cast<u32>(size.width()) && image.image->info.extent.height == static_cast<u32>(size.height());
+    };
+    images.remove_all_matching([&](auto const& image) { return is_free(image) && !fits(image); });
+    WebGPUSharedImage* lent = nullptr;
+    for (auto& image : images) {
+        if (fits(image) && is_free(image)) {
+            lent = &image;
+            break;
+        }
+    }
+    if (!lent) {
+        if (images.size() >= maximum_webgpu_image_count)
+            return false;
+        // NB: Any layout that Skia's device renders to will do, since the host imports it on the same device.
+        auto image = Gfx::create_shared_vulkan_image(m_skia_backend_context->vulkan_context(), size.width(), size.height(), VK_FORMAT_B8G8R8A8_UNORM, {});
+        if (image.is_error()) {
+            dbgln("Unable to share an image with a WebGPU canvas: {}", image.error());
+            return false;
+        }
+        images.append(WebGPUSharedImage { .handle = m_next_webgpu_image_handle++, .image = image.release_value(), .is_lent = false, .shown_surface = nullptr, .frames_shown_since = 0 });
+        lent = &images.last();
+    }
+    auto fd = lent->image->get_dma_buf_fd();
+    if (fd < 0)
+        return false;
+    lent->is_lent = true;
+    lent->shown_surface = nullptr;
+    out_image = {
+        .handle = lent->handle,
+        .fd = fd,
+        .modifier = lent->image->info.modifier,
+        .stride = lent->image->info.row_pitch,
+        .offset = 0,
+    };
+    return true;
+}
+
+void CanvasHost::take_back_webgpu_image(Compositing::CanvasId canvas_id, u64 handle)
+{
+    auto images = m_webgpu_shared_images.find(canvas_id);
+    if (images == m_webgpu_shared_images.end())
+        return;
+    for (auto& image : images->value) {
+        if (image.handle == handle)
+            image.is_lent = false;
+    }
+}
+
+void CanvasHost::show_webgpu_image(Compositing::CanvasId canvas_id, u64 handle)
+{
+    auto images = m_webgpu_shared_images.find(canvas_id);
+    if (images == m_webgpu_shared_images.end() || !m_webgpu_canvases.contains(canvas_id))
+        return;
+    for (auto& image : images->value)
+        ++image.frames_shown_since;
+    for (auto& image : images->value) {
+        if (image.handle != handle)
+            continue;
+        image.is_lent = false;
+        image.frames_shown_since = 0;
+        // NB: A new surface each time, since Skia keeps track of the layout of the images it draws from, and the
+        //     host leaves the image in the layout the surface starts out with.
+        auto painting_surface = Gfx::PaintingSurface::create_from_vkimage(*m_skia_backend_context, image.image, Gfx::PaintingSurface::Origin::TopLeft);
+        image.shown_surface = PresentableSurface::create(move(painting_surface), Gfx::PaintingSurface::Origin::TopLeft);
+        m_canvas_surface_registry.set_canvas_surface(m_canvas_surface_owner_id, canvas_id, *image.shown_surface);
+        return;
+    }
+}
+#endif
+
+void CanvasHost::wait_for_webgpu_frames()
+{
+    if (m_webgpu_host)
+        show_finished_webgpu_frames(true);
+}
+
+void CanvasHost::show_webgpu_frame(Compositing::CanvasId canvas_id, Gfx::Bitmap const& frame)
+{
+    auto pool = m_webgpu_canvases.find(canvas_id);
+    if (pool == m_webgpu_canvases.end())
+        return;
+    auto surface_or_error = pool->value.surface_for_next_content(frame.size(), m_skia_backend_context);
+    if (surface_or_error.is_error()) {
+        dbgln("Unable to present a WebGPU canvas: {}", surface_or_error.error());
+        return;
+    }
+    auto surface = surface_or_error.release_value();
+    surface->painting_surface().write_from_bitmap(frame);
+    m_canvas_surface_registry.set_canvas_surface(m_canvas_surface_owner_id, canvas_id, *surface);
 }
 
 OwnPtr<Canvas2DCommandPlayer> CanvasHost::create_2d_command_player(Gfx::IntSize size, bool alpha, bool will_read_frequently, Gfx::ColorSpace const& color_space)
@@ -171,7 +365,11 @@ CanvasHost::CreateWebGLContextResult CanvasHost::create_webgl_context(Compositin
 
 void CanvasHost::destroy_context(Compositing::CanvasId canvas_id)
 {
-    if (m_contexts.remove(canvas_id))
+#ifdef USE_VULKAN_DMABUF_IMAGES
+    // NB: An image the host still renders into lives on as its dma-buf.
+    m_webgpu_shared_images.remove(canvas_id);
+#endif
+    if (m_contexts.remove(canvas_id) || m_webgpu_canvases.remove(canvas_id))
         m_canvas_surface_registry.remove_canvas_surface(canvas_id);
 }
 

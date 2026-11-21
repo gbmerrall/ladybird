@@ -112,6 +112,9 @@ public:
     void present_webgl_canvas(Compositing::CanvasId, bool preserve_drawing_buffer);
     void clear_webgl_drawing_buffer(Compositing::CanvasId);
     ByteBuffer webgl_sync_call(Compositing::CanvasId, ByteBuffer request);
+    Optional<Compositing::CanvasId> create_webgpu_canvas();
+    void send_webgpu_commands(ReadonlyBytes);
+    void present_webgpu_canvas(Compositing::CanvasId);
     Compositing::WebGL::ReadPixelsResult read_webgl_pixels(Compositing::CanvasId, Compositing::WebGL::GLint x, Compositing::WebGL::GLint y, Compositing::WebGL::GLsizei width, Compositing::WebGL::GLsizei height, Compositing::WebGL::GLenum format, Compositing::WebGL::GLenum type, Compositing::WebGL::GLsizei buf_size, Core::AnonymousBuffer const& pixels);
     bool read_webgl_buffer_sub_data(Compositing::CanvasId, Compositing::WebGL::GLenum target, Compositing::WebGL::GLintptr offset, Compositing::WebGL::GLintptr size, Core::AnonymousBuffer const& data);
 
@@ -151,6 +154,7 @@ private:
     virtual void remote_descendants_prepared_for_screenshot(u64 request_id) override;
     virtual void did_lose_compositor() override;
     virtual void placeholder_canvas_committed(Compositing::CanvasId, Gfx::IntSize, bool origin_clean) override;
+    virtual void webgpu_events(ByteBuffer events) override;
     virtual void overlay_scrollbar_visibilities_changed(Vector<Web::OverlayScrollbarVisibility>) override;
 
     bool can_send_message_to_compositor() const;

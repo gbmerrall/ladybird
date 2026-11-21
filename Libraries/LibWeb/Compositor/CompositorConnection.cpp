@@ -32,6 +32,7 @@
 #include <LibWeb/Page/EventHandler.h>
 #include <LibWeb/Page/Page.h>
 #include <LibWeb/Platform/ImageCodecPlugin.h>
+#include <LibWeb/WebGPU/WebGPUClient.h>
 
 // The Paint stage presents frames, and only the connection hands it the poster it presents them through, and the
 // screenshots it asks for after them.
@@ -850,6 +851,35 @@ void CompositorConnection::clear_webgl_drawing_buffer(Compositing::CanvasId canv
     async_webgl_clear_drawing_buffer(canvas_id);
 }
 
+Optional<Compositing::CanvasId> CompositorConnection::create_webgpu_canvas()
+{
+    if (!can_send_message_to_compositor())
+        return {};
+
+    auto response = send_sync_but_allow_failure<Messages::CompositorWebContentServer::WebgpuCreateCanvas>();
+    if (!response) {
+        did_lose_compositor();
+        return {};
+    }
+    return response->canvas_id();
+}
+
+void CompositorConnection::send_webgpu_commands(ReadonlyBytes commands)
+{
+    if (!can_send_message_to_compositor())
+        return;
+
+    async_webgpu_commands(commands);
+}
+
+void CompositorConnection::present_webgpu_canvas(Compositing::CanvasId canvas_id)
+{
+    if (!can_send_message_to_compositor())
+        return;
+
+    async_webgpu_present_canvas(canvas_id);
+}
+
 ByteBuffer CompositorConnection::webgl_sync_call(Compositing::CanvasId canvas_id, ByteBuffer request)
 {
     if (!can_send_message_to_compositor())
@@ -975,6 +1005,11 @@ void CompositorConnection::placeholder_canvas_committed(Compositing::CanvasId ca
     Web::HTML::HTMLCanvasElement::placeholder_frame_committed(canvas_id, size, origin_clean);
 }
 
+void CompositorConnection::webgpu_events(ByteBuffer events)
+{
+    Web::WebGPU::handle_events_from_compositor(events);
+}
+
 void CompositorConnection::prepare_remote_descendants_for_screenshot(Web::CompositorContextId context_id, Function<void()>&& callback)
 {
     if (!can_send_message_to_compositor()) {
@@ -1058,6 +1093,8 @@ void CompositorConnection::did_lose_compositor()
     // Nothing will answer the preparations now, and a screenshot that waits for one goes on without a compositor.
     for (auto& entry : exchange(m_remote_descendant_preparations, {}))
         entry.value();
+
+    Web::WebGPU::compositor_was_lost();
 
     if (on_compositor_lost)
         on_compositor_lost();
