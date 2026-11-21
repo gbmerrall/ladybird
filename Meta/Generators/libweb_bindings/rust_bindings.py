@@ -29,6 +29,7 @@ from typing import Optional
 from typing import TextIO
 from typing import Tuple
 
+from Generators.libweb_bindings.constants import define_the_constants
 from Generators.libweb_bindings.context import GenerationContext
 from Generators.libweb_bindings.includes import GeneratedIncludes
 from Generators.libweb_bindings.json_conversions import write_rust_dictionary_json_conversions
@@ -340,10 +341,12 @@ def write_cpp_implementation(
 void {interface.namespace_class}::initialize(JS::Realm& realm, JS::Object& object)
 {{
     {initialize_namespace}(JS::HostABI::vm_to_abi(realm.vm()), &realm, JS::HostABI::object_to_abi(&object));
-}}
-
 """
         )
+        # https://webidl.spec.whatwg.org/#create-a-namespace-object
+        # 4. Define the constants of namespace on namespaceObject given realm.
+        define_the_constants(out, context, includes, interface)
+        out.write("}\n\n")
         return
     includes.add("LibJS/HostClassBuilder.h")
     includes.add("LibJS/Runtime/Error.h")
@@ -1154,7 +1157,7 @@ RUST_BINDINGS_IMPORTS = """    #![allow(unused_imports)]
         to_long_long_clamping, to_long_long_enforcing_range, to_object, to_promise, to_shared_array_buffer, to_typed_array,
         to_unrestricted_double, to_unrestricted_float, to_unsigned_long, to_unsigned_long_clamping,
         to_unsigned_long_enforcing_range,
-        to_unsigned_long_long, to_unsigned_long_long_enforcing_range, to_usv_string,
+        to_unsigned_long_long, to_unsigned_long_long_enforcing_range, to_unsigned_short_clamping, to_usv_string,
     };
     use crate::bindings::interface::{
         Inherits, Interface, Ref, Wrapped, cell_class, construct_arguments, construct_wrapper, create_dictionary_object,
@@ -1619,10 +1622,7 @@ def write_rust_namespace(out: TextIO, context: GenerationContext, interface: Int
             f"{interface.path}: the namespace {interface.name} has members marked [FIXME], which the Rust bindings do "
             "not record on a namespace object yet"
         )
-    if members.constants:
-        raise UnsupportedByRustBindings(
-            f"{interface.path}: the namespace {interface.name} has constants, which the Rust bindings do not handle yet"
-        )
+    # NB: The constants of a namespace are defined by its C++ initialize(), which write_cpp_implementation() writes.
     for attribute in members.attributes:
         if attribute.setter_method is not None:
             raise UnsupportedByRustBindings(
@@ -1660,6 +1660,11 @@ def write_rust_namespace(out: TextIO, context: GenerationContext, interface: Int
     for operation_set in members.operation_sets:
         write_rust_operation_set(out, context, interface, operation_set, write_rust_static_operation)
 
+    # NB: A namespace of constants alone, which the C++ initialize() defines, has nothing to define in a realm here.
+    uses_realm = (
+        bool(members.attributes or members.operation_sets) or "WithInitializer" in interface.extended_attributes
+    )
+    realm_binding = "realm" if uses_realm else "_realm"
     out.write(
         f"""
     /// The steps of {interface.namespace_class}::initialize() of LibWeb's C++ bindings.
@@ -1674,7 +1679,7 @@ def write_rust_namespace(out: TextIO, context: GenerationContext, interface: Int
         object: *mut c_void,
     ) {{
         // SAFETY: The caller passes live pointers.
-        let (vm, realm, object) = unsafe {{ entry_point_arguments(vm, realm, object) }};
+        let (vm, {realm_binding}, object) = unsafe {{ entry_point_arguments(vm, realm, object) }};
         // The class string of a namespace object is the namespace's identifier.
         define_to_string_tag(vm, object, "{interface.name}");
 """
@@ -2576,7 +2581,7 @@ pub(crate) mod definitions {
         to_long_enforcing_range, to_long_long, to_long_long_enforcing_range, to_object, to_shared_array_buffer, to_typed_array,
         to_unrestricted_double, to_unrestricted_float, to_unsigned_long, to_unsigned_long_clamping,
         to_unsigned_long_enforcing_range,
-        to_unsigned_long_long, to_unsigned_long_long_enforcing_range, to_usv_string,
+        to_unsigned_long_long, to_unsigned_long_long_enforcing_range, to_unsigned_short_clamping, to_usv_string,
     };
     use crate::bindings::interface::{
         Interface, Ref, create_dictionary_object, implementation_if, implementation_of, set_dictionary_member,

@@ -410,6 +410,16 @@ pub(crate) fn to_long_long_clamping(vm: &Vm, value: Value) -> ThrowCompletionOr<
     Ok(to_integer_clamping(vm, value, -MAX_SAFE_INTEGER, MAX_SAFE_INTEGER)? as i64)
 }
 
+/// A JS value converted to an unsigned short with [Clamp], https://webidl.spec.whatwg.org/#js-unsigned-short
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "the value is an integer within the bounds of the type"
+)]
+pub(crate) fn to_unsigned_short_clamping(vm: &Vm, value: Value) -> ThrowCompletionOr<u16> {
+    Ok(to_integer_clamping(vm, value, 0.0, f64::from(u16::MAX))? as u16)
+}
+
 /// A JS value converted to an unsigned long with [Clamp], https://webidl.spec.whatwg.org/#js-unsigned-long
 #[allow(
     clippy::cast_possible_truncation,
