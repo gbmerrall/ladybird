@@ -1,0 +1,23 @@
+[package]
+name = "webgpu_host"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+ak = { path = "../../../AK/Rust" }
+webgpu_wire = { path = "../../../Libraries/LibWebGPU/Wire" }
+wgpu = { version = "=30.0.2", default-features = false, features = ["std", "parking_lot", "wgsl"] }
+
+# One GPU API per platform: Metal on macOS, Vulkan elsewhere.
+[target.'cfg(target_os = "macos")'.dependencies]
+wgpu = { version = "=30.0.2", default-features = false, features = ["metal"] }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+wgpu = { version = "=30.0.2", default-features = false, features = ["vulkan"] }
+
+[lints]
+workspace = true
