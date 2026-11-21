@@ -1,0 +1,39 @@
+// https://gpuweb.github.io/gpuweb/#gpusampler
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUSampler {
+};
+
+GPUSampler includes GPUObjectBase;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpusamplerdescriptor
+dictionary GPUSamplerDescriptor : GPUObjectDescriptorBase {
+    GPUAddressMode addressModeU = "clamp-to-edge";
+    GPUAddressMode addressModeV = "clamp-to-edge";
+    GPUAddressMode addressModeW = "clamp-to-edge";
+    GPUFilterMode magFilter = "nearest";
+    GPUFilterMode minFilter = "nearest";
+    GPUMipmapFilterMode mipmapFilter = "nearest";
+    float lodMinClamp = 0;
+    float lodMaxClamp = 32;
+    GPUCompareFunction compare;
+    [Clamp] unsigned short maxAnisotropy = 1;
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpuaddressmode
+enum GPUAddressMode {
+    "clamp-to-edge",
+    "repeat",
+    "mirror-repeat",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpufiltermode
+enum GPUFilterMode {
+    "nearest",
+    "linear",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpumipmapfiltermode
+enum GPUMipmapFilterMode {
+    "nearest",
+    "linear",
+};

@@ -1,0 +1,20 @@
+// https://gpuweb.github.io/gpuweb/#gpuadapter
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUAdapter {
+    [SameObject] readonly attribute GPUSupportedFeatures features;
+    [SameObject] readonly attribute GPUSupportedLimits limits;
+    [SameObject] readonly attribute GPUAdapterInfo info;
+    readonly attribute boolean isFallbackAdapter;
+
+    [CreatesPromise] Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpudevicedescriptor
+// FIXME: defaultQueue. The spec's requiredLimits values are (GPUSize64 or undefined).
+dictionary GPUDeviceDescriptor : GPUObjectDescriptorBase {
+    sequence<GPUFeatureName> requiredFeatures = [];
+    record<DOMString, GPUSize64> requiredLimits;
+};
+
+// https://gpuweb.github.io/gpuweb/#typedefdef-gpusize64
+typedef [EnforceRange] unsigned long long GPUSize64;

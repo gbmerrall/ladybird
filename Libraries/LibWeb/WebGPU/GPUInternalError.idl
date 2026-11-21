@@ -1,0 +1,5 @@
+// https://gpuweb.github.io/gpuweb/#gpuinternalerror
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUInternalError : GPUError {
+    constructor(DOMString message);
+};

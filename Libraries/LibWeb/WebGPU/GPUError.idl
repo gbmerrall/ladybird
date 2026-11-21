@@ -1,0 +1,12 @@
+// https://gpuweb.github.io/gpuweb/#gpuerror
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUError {
+    readonly attribute DOMString message;
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpuerrorfilter
+enum GPUErrorFilter {
+    "validation",
+    "out-of-memory",
+    "internal",
+};

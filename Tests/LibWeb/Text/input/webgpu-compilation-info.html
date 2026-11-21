@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<script src="include.js"></script>
+<script>
+  asyncTest(async done => {
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+    device.onuncapturederror = event => event.preventDefault();
+
+    const good = await device.createShaderModule({ code: "@compute @workgroup_size(1) fn main() {}" }).getCompilationInfo();
+    println("good shader: " + (good instanceof GPUCompilationInfo) + ", " + good.messages.length + " messages");
+
+    // The missing semicolon is on line 2, after column 50.
+    const code = "@compute @workgroup_size(1)\nfn main() { let x = 1; let y = 2; let z = x + y }";
+    const info = await device.createShaderModule({ code }).getCompilationInfo();
+    const message = info.messages[0];
+    println("broken shader: " + info.messages.length + " message(s)");
+    println("message: " + (message instanceof GPUCompilationMessage));
+    println("type: " + message.type);
+    println("lineNum: " + message.lineNum);
+    println("linePos is past column 40: " + (message.linePos > 40));
+    println("offset is past the first line: " + (message.offset > 27));
+    println("has text: " + (message.message.length > 0));
+    done();
+  });
+</script>

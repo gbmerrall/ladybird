@@ -1,0 +1,3 @@
+async pipeline: GPUComputePipeline
+results: 4,16,36,64,10,12,14,16
+a missing entry point: OperationError

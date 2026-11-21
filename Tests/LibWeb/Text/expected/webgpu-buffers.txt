@@ -1,0 +1,15 @@
+mapped at creation: mapped
+after unmap: unmapped
+size: 16, usage: 9
+work done
+while mapping: pending
+mapped: mapped
+contents: 1,2,3,4,52,53,54,55,9,10,11,12,13,14,15,16
+an overlapping range: OperationError
+detached at unmap: 0
+getMappedRange of an unmapped buffer: OperationError
+unmapped while pending: AbortError
+map for writing without MAP_WRITE: OperationError
+mapped at creation with a size of 6: RangeError
+written through a mapping: 0,0,0,0,7,7,7,7
+a write of 3 bytes: OperationError

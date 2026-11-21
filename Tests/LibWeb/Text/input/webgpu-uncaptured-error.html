@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<script src="include.js"></script>
+<script>
+  asyncTest(async done => {
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+    device.onuncapturederror = event => {
+      println("event: " + (event instanceof GPUUncapturedErrorEvent));
+      println("type: " + event.type);
+      println("cancelable: " + event.cancelable);
+      println("error: " + event.error.constructor.name);
+      println("is a GPUError: " + (event.error instanceof GPUError));
+      println("has a message: " + (event.error.message.length > 0));
+      done();
+    };
+    device.createShaderModule({ code: "this is not WGSL" });
+  });
+</script>

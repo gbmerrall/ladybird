@@ -1,0 +1,17 @@
+adapter.features: true, same object: true
+core-features-and-limits: true
+an unknown feature: false
+adapter.limits: true
+maxBindGroups is at least the default: true
+maxBufferSize is at least the default: true
+adapter.info: true, string
+isFallbackAdapter agrees: true
+an unknown feature name: TypeError
+a limit better than the adapter's: OperationError
+an unknown limit: OperationError
+device.limits.maxBindGroups (default kept): 4
+device.features has core: true
+device.adapterInfo is the adapter's: true
+GPUBufferUsage.COPY_DST: 8, VERTEX: 32
+GPUTextureUsage.RENDER_ATTACHMENT: 16
+GPUShaderStage.FRAGMENT: 2, GPUMapMode.READ: 1, GPUColorWrite.ALL: 15

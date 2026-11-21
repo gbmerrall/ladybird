@@ -1,0 +1,12 @@
+// https://gpuweb.github.io/gpuweb/#gpupipelinelayout
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUPipelineLayout {
+};
+
+GPUPipelineLayout includes GPUObjectBase;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpupipelinelayoutdescriptor
+// FIXME: The spec's bindGroupLayouts are nullable.
+dictionary GPUPipelineLayoutDescriptor : GPUObjectDescriptorBase {
+    required sequence<GPUBindGroupLayout> bindGroupLayouts;
+};

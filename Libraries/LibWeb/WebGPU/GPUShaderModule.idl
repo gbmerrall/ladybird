@@ -1,0 +1,7 @@
+// https://gpuweb.github.io/gpuweb/#gpushadermodule
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUShaderModule {
+    [CreatesPromise] Promise<GPUCompilationInfo> getCompilationInfo();
+};
+
+GPUShaderModule includes GPUObjectBase;

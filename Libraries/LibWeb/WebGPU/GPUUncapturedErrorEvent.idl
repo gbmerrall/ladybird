@@ -1,0 +1,11 @@
+// https://gpuweb.github.io/gpuweb/#gpuuncapturederrorevent
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUUncapturedErrorEvent : Event {
+    constructor(DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict);
+    [SameObject] readonly attribute GPUError error;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpuuncapturederroreventinit
+dictionary GPUUncapturedErrorEventInit : EventInit {
+    required GPUError error;
+};

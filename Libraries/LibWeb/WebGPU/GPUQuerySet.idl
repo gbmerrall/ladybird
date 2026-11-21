@@ -1,0 +1,22 @@
+// https://gpuweb.github.io/gpuweb/#gpuqueryset
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUQuerySet {
+    undefined destroy();
+
+    readonly attribute GPUQueryType type;
+    readonly attribute unsigned long count;
+};
+
+GPUQuerySet includes GPUObjectBase;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpuquerysetdescriptor
+dictionary GPUQuerySetDescriptor : GPUObjectDescriptorBase {
+    required GPUQueryType type;
+    required [EnforceRange] unsigned long count;
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpuquerytype
+enum GPUQueryType {
+    "occlusion",
+    "timestamp",
+};

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<script src="include.js"></script>
+<script>
+  asyncTest(async done => {
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+    device.onuncapturederror = event => println("uncaptured: " + event.error.constructor.name + ": " + event.error.message);
+
+    println("WGSL language features: " + [...navigator.gpu.wgslLanguageFeatures].sort().join(", "));
+
+    // A pipeline-overridable constant sets the color, and a render bundle draws with the pipeline.
+    const module = device.createShaderModule({
+      code: `
+        override green: f32 = 0.0;
+        @vertex fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
+          var p = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+          return vec4f(p[i], 0, 1);
+        }
+        @fragment fn fs() -> @location(0) vec4f { return vec4f(1, green, 0, 1); }`,
+    });
+    const format = "rgba8unorm";
+    const pipeline = device.createRenderPipeline({
+      layout: "auto",
+      vertex: { module },
+      fragment: { module, targets: [{ format }], constants: { green: 0.5 } },
+    });
+    const bundleEncoder = device.createRenderBundleEncoder({ colorFormats: [format] });
+    bundleEncoder.setPipeline(pipeline);
+    bundleEncoder.draw(3);
+    const bundle = bundleEncoder.finish();
+    println("bundle: " + bundle.constructor.name);
+
+    const texture = device.createTexture({ size: [1, 1], format, usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC });
+    const readable = device.createBuffer({ size: 4, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+    const encoder = device.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [{ view: texture, loadOp: "clear", clearValue: [0, 0, 1, 1], storeOp: "store" }] });
+    pass.executeBundles([bundle]);
+    pass.end();
+    encoder.copyTextureToBuffer({ texture }, { buffer: readable }, [1, 1]);
+    device.queue.submit([encoder.finish()]);
+    await readable.mapAsync(GPUMapMode.READ);
+    println("pixel: " + Array.from(new Uint8Array(readable.getMappedRange())).join(","));
+    readable.unmap();
+    done();
+  });
+</script>

@@ -1,0 +1,10 @@
+// https://gpuweb.github.io/gpuweb/#namespacedef-gpucolorwrite
+// FIXME: The spec makes the namespace [SecureContext], which the Rust bindings do not handle for namespaces.
+[Exposed=Window, ImplementedIn=Rust]
+namespace GPUColorWrite {
+    const GPUFlagsConstant RED   = 0x1;
+    const GPUFlagsConstant GREEN = 0x2;
+    const GPUFlagsConstant BLUE  = 0x4;
+    const GPUFlagsConstant ALPHA = 0x8;
+    const GPUFlagsConstant ALL   = 0xF;
+};

@@ -1,0 +1,30 @@
+// https://gpuweb.github.io/gpuweb/#gpubuffer
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUBuffer {
+    readonly attribute unsigned long long size;
+    readonly attribute unsigned long usage;
+
+    readonly attribute GPUBufferMapState mapState;
+
+    [CreatesPromise] Promise<undefined> mapAsync([EnforceRange] unsigned long mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
+    ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size);
+    undefined unmap();
+
+    undefined destroy();
+};
+
+GPUBuffer includes GPUObjectBase;
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpubuffermapstate
+enum GPUBufferMapState {
+    "unmapped",
+    "pending",
+    "mapped",
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpubufferdescriptor
+dictionary GPUBufferDescriptor : GPUObjectDescriptorBase {
+    required GPUSize64 size;
+    required [EnforceRange] unsigned long usage;
+    boolean mappedAtCreation = false;
+};

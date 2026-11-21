@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<script src="include.js"></script>
+<script>
+  asyncTest(async done => {
+    const adapter = await navigator.gpu.requestAdapter();
+    println("adapter.features: " + (adapter.features instanceof GPUSupportedFeatures) + ", same object: " + (adapter.features === adapter.features));
+    println("core-features-and-limits: " + adapter.features.has("core-features-and-limits"));
+    println("an unknown feature: " + adapter.features.has("no-such-feature"));
+    println("adapter.limits: " + (adapter.limits instanceof GPUSupportedLimits));
+    println("maxBindGroups is at least the default: " + (adapter.limits.maxBindGroups >= 4));
+    println("maxBufferSize is at least the default: " + (adapter.limits.maxBufferSize >= 268435456));
+    println("adapter.info: " + (adapter.info instanceof GPUAdapterInfo) + ", " + typeof adapter.info.vendor);
+    println("isFallbackAdapter agrees: " + (adapter.isFallbackAdapter === adapter.info.isFallbackAdapter));
+
+    try {
+      await adapter.requestDevice({ requiredFeatures: ["texture-compression-astc-sliced-3d", "no-such-feature"] });
+      println("FAIL: an unknown feature name was accepted");
+    } catch (error) {
+      println("an unknown feature name: " + error.name);
+    }
+    try {
+      await adapter.requestDevice({ requiredLimits: { maxBindGroups: adapter.limits.maxBindGroups + 1 } });
+      println("FAIL: a limit better than the adapter's was accepted");
+    } catch (error) {
+      println("a limit better than the adapter's: " + error.name);
+    }
+    try {
+      await adapter.requestDevice({ requiredLimits: { maxNoSuchLimit: 1 } });
+      println("FAIL: an unknown limit was accepted");
+    } catch (error) {
+      println("an unknown limit: " + error.name);
+    }
+
+    const device = await adapter.requestDevice({ requiredLimits: { maxBindGroups: 1 } });
+    println("device.limits.maxBindGroups (default kept): " + device.limits.maxBindGroups);
+    println("device.features has core: " + device.features.has("core-features-and-limits"));
+    println("device.adapterInfo is the adapter's: " + (device.adapterInfo === adapter.info));
+
+    println("GPUBufferUsage.COPY_DST: " + GPUBufferUsage.COPY_DST + ", VERTEX: " + GPUBufferUsage.VERTEX);
+    println("GPUTextureUsage.RENDER_ATTACHMENT: " + GPUTextureUsage.RENDER_ATTACHMENT);
+    println("GPUShaderStage.FRAGMENT: " + GPUShaderStage.FRAGMENT + ", GPUMapMode.READ: " + GPUMapMode.READ + ", GPUColorWrite.ALL: " + GPUColorWrite.ALL);
+    done();
+  });
+</script>

@@ -1,0 +1,8 @@
+// https://gpuweb.github.io/gpuweb/#namespacedef-gpushaderstage
+// FIXME: The spec makes the namespace [SecureContext], which the Rust bindings do not handle for namespaces.
+[Exposed=Window, ImplementedIn=Rust]
+namespace GPUShaderStage {
+    const GPUFlagsConstant VERTEX   = 0x1;
+    const GPUFlagsConstant FRAGMENT = 0x2;
+    const GPUFlagsConstant COMPUTE  = 0x4;
+};

@@ -1,0 +1,3 @@
+WGSL language features: packed_4x8_integer_dot_product, pointer_composite_access, readonly_and_readwrite_storage_textures
+bundle: GPURenderBundle
+pixel: 255,128,0,255

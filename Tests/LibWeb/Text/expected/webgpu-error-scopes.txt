@@ -1,0 +1,6 @@
+validation scope caught: GPUValidationError
+inner scope with no error: null
+outer scope with no error: null
+only the innermost matching scope catches: GPUValidationError, null
+popping an empty stack rejects: OperationError
+constructed: made by script

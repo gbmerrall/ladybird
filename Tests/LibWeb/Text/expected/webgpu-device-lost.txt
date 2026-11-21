@@ -1,0 +1,3 @@
+lost is the same promise: true
+info: true
+reason: destroyed

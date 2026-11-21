@@ -110,6 +110,7 @@ ALLOWED_REALM_MENTIONS = {
     ),
     "WebDriver": (2, 7, "WebDriver execute/JSON conversion still materializes JS values for automation"),
     "WebGL": (4, 8, "WebGL contexts are created in the realm of their canvas, and their events in it"),
+    "WebGPU": (4, 6, "the C++ facades create the Rust GPU and GPUCanvasContext objects in a given realm"),
     "WebLocks": (2, 4, "the C++ glue creates a Rust LockManager and schedules Rust steps in selected realms"),
     "WebRTC": (
         13,

@@ -11,6 +11,7 @@
 #include <LibWeb/Bindings/Wrappable.h>
 #include <LibWeb/Bindings/WrapperWorld.h>
 #include <LibWeb/Clipboard/Clipboard.h>
+#include <LibWeb/WebGPU/GPU.h>
 #include <LibWeb/CredentialManagement/CredentialsContainer.h>
 #include <LibWeb/DOM/Document.h>
 #include <LibWeb/EncryptedMediaExtensions/Algorithms.h>
@@ -79,6 +80,7 @@ void Navigator::visit_edges(GC::Cell::Visitor& visitor)
     visitor.visit(m_mime_type_array);
     visitor.visit(m_plugin_array);
     visitor.visit(m_clipboard);
+    visitor.visit(m_gpu);
     visitor.visit(m_geolocation);
     visitor.visit(m_user_activation);
     visitor.visit(m_service_worker_container);
@@ -101,6 +103,13 @@ GC::Ref<PluginArray> Navigator::plugins()
     if (!m_plugin_array)
         m_plugin_array = PluginArray::create(*m_window);
     return *m_plugin_array;
+}
+
+GC::Ref<WebGPU::GPU> Navigator::gpu()
+{
+    if (!m_gpu)
+        m_gpu = WebGPU::GPU::create(relevant_realm(*m_window));
+    return *m_gpu;
 }
 
 GC::Ref<Clipboard::Clipboard> Navigator::clipboard()

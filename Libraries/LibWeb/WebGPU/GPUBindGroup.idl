@@ -1,0 +1,29 @@
+// https://gpuweb.github.io/gpuweb/#gpubindgroup
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUBindGroup {
+};
+
+GPUBindGroup includes GPUObjectBase;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpubindgroupdescriptor
+dictionary GPUBindGroupDescriptor : GPUObjectDescriptorBase {
+    required GPUBindGroupLayout layout;
+    required sequence<GPUBindGroupEntry> entries;
+};
+
+// https://gpuweb.github.io/gpuweb/#typedefdef-gpubindingresource
+// FIXME: GPUExternalTexture.
+typedef (GPUSampler or GPUTexture or GPUTextureView or GPUBuffer or GPUBufferBinding) GPUBindingResource;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpubindgroupentry
+dictionary GPUBindGroupEntry {
+    required [EnforceRange] unsigned long binding;
+    required GPUBindingResource resource;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpubufferbinding
+dictionary GPUBufferBinding {
+    required GPUBuffer buffer;
+    GPUSize64 offset = 0;
+    GPUSize64 size;
+};

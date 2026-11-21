@@ -1,0 +1,78 @@
+// https://gpuweb.github.io/gpuweb/#gpubindgrouplayout
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUBindGroupLayout {
+};
+
+GPUBindGroupLayout includes GPUObjectBase;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpubindgrouplayoutdescriptor
+dictionary GPUBindGroupLayoutDescriptor : GPUObjectDescriptorBase {
+    required sequence<GPUBindGroupLayoutEntry> entries;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpubindgrouplayoutentry
+// FIXME: externalTexture.
+dictionary GPUBindGroupLayoutEntry {
+    required [EnforceRange] unsigned long binding;
+    required [EnforceRange] unsigned long visibility;
+    GPUBufferBindingLayout buffer;
+    GPUSamplerBindingLayout sampler;
+    GPUTextureBindingLayout texture;
+    GPUStorageTextureBindingLayout storageTexture;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpubufferbindinglayout
+dictionary GPUBufferBindingLayout {
+    GPUBufferBindingType type = "uniform";
+    boolean hasDynamicOffset = false;
+    GPUSize64 minBindingSize = 0;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpusamplerbindinglayout
+dictionary GPUSamplerBindingLayout {
+    GPUSamplerBindingType type = "filtering";
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gputexturebindinglayout
+dictionary GPUTextureBindingLayout {
+    GPUTextureSampleType sampleType = "float";
+    GPUTextureViewDimension viewDimension = "2d";
+    boolean multisampled = false;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpustoragetexturebindinglayout
+dictionary GPUStorageTextureBindingLayout {
+    GPUStorageTextureAccess access = "write-only";
+    required GPUTextureFormat format;
+    GPUTextureViewDimension viewDimension = "2d";
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpubufferbindingtype
+enum GPUBufferBindingType {
+    "uniform",
+    "storage",
+    "read-only-storage",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpusamplerbindingtype
+enum GPUSamplerBindingType {
+    "filtering",
+    "non-filtering",
+    "comparison",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gputexturesampletype
+enum GPUTextureSampleType {
+    "float",
+    "unfilterable-float",
+    "depth",
+    "sint",
+    "uint",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpustoragetextureaccess
+enum GPUStorageTextureAccess {
+    "write-only",
+    "read-only",
+    "read-write",
+};

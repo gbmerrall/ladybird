@@ -1,0 +1,27 @@
+// https://gpuweb.github.io/gpuweb/#gpucanvascontext
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUCanvasContext {
+    readonly attribute (HTMLCanvasElement or OffscreenCanvas) canvas;
+
+    undefined configure(GPUCanvasConfiguration configuration);
+    undefined unconfigure();
+
+    GPUCanvasConfiguration? getConfiguration();
+    GPUTexture getCurrentTexture();
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpucanvasconfiguration
+// FIXME: viewFormats, colorSpace and toneMapping.
+dictionary GPUCanvasConfiguration {
+    required GPUDevice device;
+    required GPUTextureFormat format;
+    // NB: 16 is GPUTextureUsage.RENDER_ATTACHMENT.
+    [EnforceRange] unsigned long usage = 16;
+    GPUCanvasAlphaMode alphaMode = "opaque";
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpucanvasalphamode
+enum GPUCanvasAlphaMode {
+    "opaque",
+    "premultiplied",
+};

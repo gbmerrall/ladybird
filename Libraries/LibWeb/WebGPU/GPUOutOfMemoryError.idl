@@ -1,0 +1,5 @@
+// https://gpuweb.github.io/gpuweb/#gpuoutofmemoryerror
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUOutOfMemoryError : GPUError {
+    constructor(DOMString message);
+};

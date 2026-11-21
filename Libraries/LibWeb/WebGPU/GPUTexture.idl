@@ -1,0 +1,74 @@
+// https://gpuweb.github.io/gpuweb/#gputexture
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUTexture {
+    GPUTextureView createView(optional GPUTextureViewDescriptor descriptor = {});
+    undefined destroy();
+
+    readonly attribute unsigned long width;
+    readonly attribute unsigned long height;
+    readonly attribute unsigned long depthOrArrayLayers;
+    readonly attribute unsigned long mipLevelCount;
+    readonly attribute unsigned long sampleCount;
+    readonly attribute GPUTextureDimension dimension;
+    readonly attribute GPUTextureFormat format;
+    readonly attribute unsigned long usage;
+};
+
+GPUTexture includes GPUObjectBase;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gputexturedescriptor
+dictionary GPUTextureDescriptor : GPUObjectDescriptorBase {
+    required GPUExtent3D size;
+    [EnforceRange] unsigned long mipLevelCount = 1;
+    [EnforceRange] unsigned long sampleCount = 1;
+    GPUTextureDimension dimension = "2d";
+    required GPUTextureFormat format;
+    required [EnforceRange] unsigned long usage;
+    sequence<GPUTextureFormat> viewFormats = [];
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpuextent3ddict
+dictionary GPUExtent3DDict {
+    required [EnforceRange] unsigned long width;
+    [EnforceRange] unsigned long height = 1;
+    [EnforceRange] unsigned long depthOrArrayLayers = 1;
+};
+
+// https://gpuweb.github.io/gpuweb/#typedefdef-gpuextent3d
+typedef (sequence<[EnforceRange] unsigned long> or GPUExtent3DDict) GPUExtent3D;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gputextureviewdescriptor
+// FIXME: usage and swizzle.
+dictionary GPUTextureViewDescriptor : GPUObjectDescriptorBase {
+    GPUTextureFormat format;
+    GPUTextureViewDimension dimension;
+    GPUTextureAspect aspect = "all";
+    [EnforceRange] unsigned long baseMipLevel = 0;
+    [EnforceRange] unsigned long mipLevelCount;
+    [EnforceRange] unsigned long baseArrayLayer = 0;
+    [EnforceRange] unsigned long arrayLayerCount;
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gputexturedimension
+enum GPUTextureDimension {
+    "1d",
+    "2d",
+    "3d",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gputextureviewdimension
+enum GPUTextureViewDimension {
+    "1d",
+    "2d",
+    "2d-array",
+    "cube",
+    "cube-array",
+    "3d",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gputextureaspect
+enum GPUTextureAspect {
+    "all",
+    "stencil-only",
+    "depth-only",
+};

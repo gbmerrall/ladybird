@@ -1217,6 +1217,13 @@ class PeriodicWave;
 
 }
 
+namespace Web::WebGPU {
+
+class GPU;
+class GPUCanvasContext;
+
+}
+
 namespace Web::WebGL {
 
 class RemoteWebGLTransport;

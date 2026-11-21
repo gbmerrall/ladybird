@@ -1,0 +1,5 @@
+// https://gpuweb.github.io/gpuweb/#wgsllanguagefeatures
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface WGSLLanguageFeatures {
+    readonly setlike<DOMString>;
+};

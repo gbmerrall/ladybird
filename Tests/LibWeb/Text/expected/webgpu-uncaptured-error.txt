@@ -1,0 +1,6 @@
+event: true
+type: uncapturederror
+cancelable: true
+error: GPUValidationError
+is a GPUError: true
+has a message: true

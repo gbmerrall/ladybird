@@ -1,0 +1,17 @@
+// https://gpuweb.github.io/gpuweb/#gpucompilationmessage
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUCompilationMessage {
+    readonly attribute DOMString message;
+    readonly attribute GPUCompilationMessageType type;
+    readonly attribute unsigned long long lineNum;
+    readonly attribute unsigned long long linePos;
+    readonly attribute unsigned long long offset;
+    readonly attribute unsigned long long length;
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpucompilationmessagetype
+enum GPUCompilationMessageType {
+    "error",
+    "warning",
+    "info",
+};

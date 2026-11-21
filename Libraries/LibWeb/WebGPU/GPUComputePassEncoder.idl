@@ -1,0 +1,30 @@
+// https://gpuweb.github.io/gpuweb/#gpucomputepassencoder
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUComputePassEncoder {
+    undefined setPipeline(GPUComputePipeline pipeline);
+
+    // FIXME: The overload that takes dynamic offsets in a Uint32Array.
+    undefined setBindGroup([EnforceRange] unsigned long index, GPUBindGroup? bindGroup,
+        optional sequence<[EnforceRange] unsigned long> dynamicOffsets = []);
+
+    undefined dispatchWorkgroups([EnforceRange] unsigned long workgroupCountX,
+        optional [EnforceRange] unsigned long workgroupCountY = 1,
+        optional [EnforceRange] unsigned long workgroupCountZ = 1);
+    undefined dispatchWorkgroupsIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
+
+    undefined end();
+};
+
+GPUComputePassEncoder includes GPUObjectBase;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpucomputepassdescriptor
+dictionary GPUComputePassDescriptor : GPUObjectDescriptorBase {
+    GPUComputePassTimestampWrites timestampWrites;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpucomputepasstimestampwrites
+dictionary GPUComputePassTimestampWrites {
+    required GPUQuerySet querySet;
+    [EnforceRange] unsigned long beginningOfPassWriteIndex;
+    [EnforceRange] unsigned long endOfPassWriteIndex;
+};

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<script src="include.js"></script>
+<script>
+  asyncTest(async done => {
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+    println("lost is the same promise: " + (device.lost === device.lost));
+    device.destroy();
+    const info = await device.lost;
+    println("info: " + (info instanceof GPUDeviceLostInfo));
+    println("reason: " + info.reason);
+    done();
+  });
+</script>

@@ -117,6 +117,11 @@ impl Frame {
     pub(crate) unsafe fn from_raw(frame: NonNull<c_void>) -> Self {
         Self(frame)
     }
+
+    /// The Web::WebGL::ImageSourceFrameOwnedByRecorder, for C++ to read.
+    pub(crate) fn as_ptr(&self) -> *const c_void {
+        self.0.as_ptr()
+    }
 }
 
 impl Drop for Frame {

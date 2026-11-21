@@ -64,6 +64,7 @@ public:
     [[nodiscard]] GC::Ref<MimeTypeArray> mime_types();
     [[nodiscard]] GC::Ref<PluginArray> plugins();
     [[nodiscard]] GC::Ref<Clipboard::Clipboard> clipboard();
+    [[nodiscard]] GC::Ref<WebGPU::GPU> gpu();
     [[nodiscard]] GC::Ref<Geolocation::Geolocation> geolocation();
     [[nodiscard]] GC::Ref<UserActivation> user_activation();
     [[nodiscard]] GC::Ref<CredentialManagement::CredentialsContainer> credentials();
@@ -106,6 +107,9 @@ private:
 
     // https://w3c.github.io/clipboard-apis/#dom-navigator-clipboard
     GC::Ptr<Clipboard::Clipboard> m_clipboard;
+
+    // https://gpuweb.github.io/gpuweb/#dom-navigatorgpu-gpu
+    GC::Ptr<WebGPU::GPU> m_gpu;
 
     // https://w3c.github.io/geolocation/#navigator_interface
     GC::Ptr<Geolocation::Geolocation> m_geolocation;

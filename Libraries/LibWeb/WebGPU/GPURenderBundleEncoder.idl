@@ -1,0 +1,43 @@
+// https://gpuweb.github.io/gpuweb/#gpurenderbundleencoder
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPURenderBundleEncoder {
+    GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
+
+    undefined setPipeline(GPURenderPipeline pipeline);
+
+    // FIXME: The overload that takes dynamic offsets in a Uint32Array.
+    undefined setBindGroup([EnforceRange] unsigned long index, GPUBindGroup? bindGroup,
+        optional sequence<[EnforceRange] unsigned long> dynamicOffsets = []);
+
+    undefined setIndexBuffer(GPUBuffer buffer, GPUIndexFormat indexFormat, optional GPUSize64 offset = 0,
+        optional GPUSize64 size);
+    undefined setVertexBuffer([EnforceRange] unsigned long slot, GPUBuffer? buffer, optional GPUSize64 offset = 0,
+        optional GPUSize64 size);
+
+    undefined draw([EnforceRange] unsigned long vertexCount, optional [EnforceRange] unsigned long instanceCount = 1,
+        optional [EnforceRange] unsigned long firstVertex = 0, optional [EnforceRange] unsigned long firstInstance = 0);
+    undefined drawIndexed([EnforceRange] unsigned long indexCount, optional [EnforceRange] unsigned long instanceCount = 1,
+        optional [EnforceRange] unsigned long firstIndex = 0, optional [EnforceRange] long baseVertex = 0,
+        optional [EnforceRange] unsigned long firstInstance = 0);
+    undefined drawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
+    undefined drawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
+};
+
+GPURenderBundleEncoder includes GPUObjectBase;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpurenderbundledescriptor
+dictionary GPURenderBundleDescriptor : GPUObjectDescriptorBase {
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpurenderpasslayout
+dictionary GPURenderPassLayout : GPUObjectDescriptorBase {
+    required sequence<GPUTextureFormat?> colorFormats;
+    GPUTextureFormat depthStencilFormat;
+    [EnforceRange] unsigned long sampleCount = 1;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpurenderbundleencoderdescriptor
+dictionary GPURenderBundleEncoderDescriptor : GPURenderPassLayout {
+    boolean depthReadOnly = false;
+    boolean stencilReadOnly = false;
+};

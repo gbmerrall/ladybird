@@ -1,0 +1,8 @@
+good shader: true, 0 messages
+broken shader: 1 message(s)
+message: true
+type: error
+lineNum: 2
+linePos is past column 40: true
+offset is past the first line: true
+has text: true

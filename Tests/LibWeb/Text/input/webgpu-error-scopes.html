@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<script src="include.js"></script>
+<script>
+  asyncTest(async done => {
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+    device.onuncapturederror = () => println("FAIL: an error escaped its scope");
+
+    device.pushErrorScope("validation");
+    device.createShaderModule({ code: "this is not WGSL" });
+    const caught = await device.popErrorScope();
+    println("validation scope caught: " + (caught && caught.constructor.name));
+
+    device.pushErrorScope("out-of-memory");
+    device.pushErrorScope("validation");
+    device.createShaderModule({ code: "@compute @workgroup_size(1) fn main() {}" });
+    println("inner scope with no error: " + await device.popErrorScope());
+    println("outer scope with no error: " + await device.popErrorScope());
+
+    device.pushErrorScope("out-of-memory");
+    device.pushErrorScope("validation");
+    device.createShaderModule({ code: "still not WGSL" });
+    const inner = await device.popErrorScope();
+    const outer = await device.popErrorScope();
+    println("only the innermost matching scope catches: " + (inner && inner.constructor.name) + ", " + outer);
+
+    try {
+      await device.popErrorScope();
+      println("FAIL: popping an empty stack resolved");
+    } catch (error) {
+      println("popping an empty stack rejects: " + error.name);
+    }
+
+    println("constructed: " + new GPUValidationError("made by script").message);
+    done();
+  });
+</script>

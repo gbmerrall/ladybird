@@ -43,6 +43,7 @@
 #include <LibWeb/Platform/FontPlugin.h>
 #include <LibWeb/WebGL/WebGL2RenderingContext.h>
 #include <LibWeb/WebGL/WebGLRenderingContext.h>
+#include <LibWeb/WebGPU/GPUCanvasContext.h>
 #include <LibWeb/WebIDL/AbstractOperations.h>
 #include <LibWeb/WebIDL/DOMException.h>
 #include <LibWeb/WebIDL/ExceptionOrUtils.h>
@@ -171,6 +172,9 @@ void HTMLCanvasElement::reset_context_to_default_state()
         },
         [](GC::Ref<ImageBitmapRenderingContext>&) {
             // NB: An ImageBitmapRenderingContext has no state to reset.
+        },
+        [](GC::Ref<WebGPU::GPUCanvasContext>&) {
+            // NB: A WebGPU canvas draws a new texture each frame, so it has no state to reset.
         },
         [](Empty) {
             // Do nothing.
@@ -306,6 +310,9 @@ void HTMLCanvasElement::notify_context_about_canvas_size_change()
             // NB: A blank output bitmap takes the size of the canvas when something reads it, and a valid one keeps
             //     the size of its bitmap data.
         },
+        [](GC::Ref<WebGPU::GPUCanvasContext>&) {
+            // NB: The next texture that getCurrentTexture() hands out takes the new size.
+        },
         [](Empty) {
             // Do nothing.
         });
@@ -375,6 +382,16 @@ HTMLCanvasElement::HasOrCreatedContext HTMLCanvasElement::create_bitmap_renderer
     return HasOrCreatedContext::Yes;
 }
 
+HTMLCanvasElement::HasOrCreatedContext HTMLCanvasElement::create_webgpu_context()
+{
+    if (!m_context.has<Empty>())
+        return m_context.has<GC::Ref<WebGPU::GPUCanvasContext>>() ? HasOrCreatedContext::Yes : HasOrCreatedContext::No;
+
+    m_context = WebGPU::GPUCanvasContext::create(HTML::relevant_realm(*this), *this);
+    did_create_canvas_backing_storage();
+    return HasOrCreatedContext::Yes;
+}
+
 template<typename ContextType>
 JS::ThrowCompletionOr<HTMLCanvasElement::HasOrCreatedContext> HTMLCanvasElement::create_webgl_context(JS::Value options)
 {
@@ -420,6 +437,13 @@ JS::ThrowCompletionOr<HTMLCanvasElement::RenderingContext> HTMLCanvasElement::ge
     if (type == u"webgl2"sv) {
         if (TRY(create_webgl_context<WebGL::WebGL2RenderingContext>(options)) == HasOrCreatedContext::Yes)
             return m_context.get<GC::Ref<WebGL::WebGL2RenderingContext>>();
+
+        return Empty {};
+    }
+
+    if (type == u"webgpu"sv) {
+        if (create_webgpu_context() == HasOrCreatedContext::Yes)
+            return m_context.get<GC::Ref<WebGPU::GPUCanvasContext>>();
 
         return Empty {};
     }
@@ -534,6 +558,8 @@ Optional<Compositing::CanvasId> HTMLCanvasElement::canvas_id() const
         return context->canvas_id();
     if (auto* webgl_context = canvas_webgl_context(); webgl_context && !webgl_context->is_context_lost())
         return webgl_context->canvas_id();
+    if (auto const* webgpu_context = m_context.get_pointer<GC::Ref<WebGPU::GPUCanvasContext>>())
+        return (*webgpu_context)->canvas_id();
     return {};
 }
 
@@ -572,6 +598,9 @@ void HTMLCanvasElement::prepare_for_compositing()
             },
             [](GC::Ref<ImageBitmapRenderingContext>&) {
                 // NB: The output bitmap reaches the Compositor with the display list, as the paint facts of the canvas.
+            },
+            [this](GC::Ref<WebGPU::GPUCanvasContext>& context) {
+                context->prepare_for_compositing(*this);
             },
             [](Empty) {
                 // Do nothing.

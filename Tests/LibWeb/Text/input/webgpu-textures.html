@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<script src="include.js"></script>
+<script>
+  asyncTest(async done => {
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+    device.onuncapturederror = event => println("uncaptured: " + event.error.constructor.name + ": " + event.error.message);
+
+    const usage = GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST;
+    const texture = format => device.createTexture({ size: [2, 2], format, usage });
+
+    // Reads a 2x2 texture's texels back through a buffer whose rows are 256 bytes apart.
+    async function readBack(source, bytesPerTexel) {
+      const buffer = device.createBuffer({ size: 512, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+      const encoder = device.createCommandEncoder();
+      encoder.copyTextureToBuffer({ texture: source }, { buffer, bytesPerRow: 256 }, [2, 2]);
+      device.queue.submit([encoder.finish()]);
+      await buffer.mapAsync(GPUMapMode.READ);
+      const bytes = new Uint8Array(buffer.getMappedRange());
+      const rows = [Array.from(bytes.slice(0, 2 * bytesPerTexel)), Array.from(bytes.slice(256, 256 + 2 * bytesPerTexel))];
+      buffer.unmap();
+      return rows.map(row => row.join(",")).join(" / ");
+    }
+
+    // writeTexture, then copyTextureToTexture and copyBufferToTexture.
+    const written = texture("rgba8unorm");
+    device.queue.writeTexture({ texture: written }, new Uint8Array([...Array(16).keys()]), { bytesPerRow: 8 }, [2, 2]);
+    const copied = texture("rgba8unorm");
+    const staging = device.createBuffer({ size: 264, usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+    device.queue.writeBuffer(staging, 256, new Uint8Array([90, 91, 92, 93, 94, 95, 96, 97]));
+    let encoder = device.createCommandEncoder();
+    encoder.copyTextureToTexture({ texture: written }, { texture: copied }, [2, 2]);
+    encoder.copyBufferToTexture({ buffer: staging, offset: 256, bytesPerRow: 256 }, { texture: copied, origin: [0, 1] }, [2, 1]);
+    device.queue.submit([encoder.finish()]);
+    println("written: " + await readBack(written, 4));
+    println("copied: " + await readBack(copied, 4));
+
+    // clearBuffer zeroes a range.
+    const cleared = device.createBuffer({ size: 8, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+    device.queue.writeBuffer(cleared, 0, new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
+    encoder = device.createCommandEncoder();
+    encoder.clearBuffer(cleared, 4);
+    device.queue.submit([encoder.finish()]);
+    await cleared.mapAsync(GPUMapMode.READ);
+    println("cleared: " + Array.from(new Uint8Array(cleared.getMappedRange())).join(","));
+    cleared.unmap();
+
+    // copyExternalImageToTexture from an ImageData and from a 2D canvas, flipped, and into a BGRA texture.
+    const image = new ImageData(new Uint8ClampedArray([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 128]), 2, 2);
+    const fromImageData = texture("rgba8unorm");
+    device.queue.copyExternalImageToTexture({ source: image }, { texture: fromImageData }, [2, 2]);
+    println("from ImageData: " + await readBack(fromImageData, 4));
+    const flipped = texture("bgra8unorm");
+    device.queue.copyExternalImageToTexture({ source: image, flipY: true }, { texture: flipped, premultipliedAlpha: true }, [2, 2]);
+    println("flipped, premultiplied, BGRA: " + await readBack(flipped, 4));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 2;
+    canvas.height = 2;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "rgb(10, 20, 30)";
+    context.fillRect(0, 0, 2, 1);
+    context.fillStyle = "rgb(40, 50, 60)";
+    context.fillRect(0, 1, 2, 1);
+    const fromCanvas = texture("rgba8unorm");
+    device.queue.copyExternalImageToTexture({ source: canvas }, { texture: fromCanvas }, [2, 2]);
+    println("from a canvas: " + await readBack(fromCanvas, 4));
+
+    try {
+      device.queue.copyExternalImageToTexture({ source: image, origin: [1, 0] }, { texture: fromCanvas }, [2, 2]);
+      println("FAIL: a copy past the source was accepted");
+    } catch (error) {
+      println("a copy past the source: " + error.name);
+    }
+    done();
+  });
+</script>

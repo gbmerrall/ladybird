@@ -36,6 +36,7 @@ libweb_rust = { path = "../../Rust" }
 libwebcommon_rust = { path = "../../../LibWebCommon/Rust" }
 rustc-demangle = "0.1"
 smallvec = { version = "1.16.5", features = ["const_generics", "union"] }
+webgpu_wire = { path = "../../../LibWebGPU/Wire" }
 
 [build-dependencies]
 serde_json = { version = "1", features = ["float_roundtrip", "preserve_order"] }

@@ -1,0 +1,122 @@
+// https://gpuweb.github.io/gpuweb/#gpucommandencoder
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUCommandEncoder {
+    GPURenderPassEncoder beginRenderPass(GPURenderPassDescriptor descriptor);
+    GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
+    [ImplementedAs=copy_buffer_to_buffer_from_start] undefined copyBufferToBuffer(GPUBuffer source, GPUBuffer destination,
+        optional GPUSize64 size);
+    [ImplementedAs=copy_buffer_to_buffer] undefined copyBufferToBuffer(GPUBuffer source, GPUSize64 sourceOffset,
+        GPUBuffer destination, GPUSize64 destinationOffset, optional GPUSize64 size);
+    undefined copyBufferToTexture(GPUTexelCopyBufferInfo source, GPUTexelCopyTextureInfo destination,
+        GPUExtent3D copySize);
+    undefined copyTextureToBuffer(GPUTexelCopyTextureInfo source, GPUTexelCopyBufferInfo destination,
+        GPUExtent3D copySize);
+    undefined copyTextureToTexture(GPUTexelCopyTextureInfo source, GPUTexelCopyTextureInfo destination,
+        GPUExtent3D copySize);
+    undefined clearBuffer(GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
+    undefined resolveQuerySet(GPUQuerySet querySet, [EnforceRange] unsigned long firstQuery,
+        [EnforceRange] unsigned long queryCount, GPUBuffer destination, GPUSize64 destinationOffset);
+
+    GPUCommandBuffer finish(optional GPUCommandBufferDescriptor descriptor = {});
+};
+
+GPUCommandEncoder includes GPUObjectBase;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpucommandbufferdescriptor
+dictionary GPUCommandBufferDescriptor : GPUObjectDescriptorBase {
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpurenderpassdescriptor
+// FIXME: maxDrawCount.
+dictionary GPURenderPassDescriptor : GPUObjectDescriptorBase {
+    required sequence<GPURenderPassColorAttachment?> colorAttachments;
+    GPURenderPassDepthStencilAttachment depthStencilAttachment;
+    GPUQuerySet occlusionQuerySet;
+    GPURenderPassTimestampWrites timestampWrites;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpurenderpasstimestampwrites
+dictionary GPURenderPassTimestampWrites {
+    required GPUQuerySet querySet;
+    [EnforceRange] unsigned long beginningOfPassWriteIndex;
+    [EnforceRange] unsigned long endOfPassWriteIndex;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpurenderpassdepthstencilattachment
+dictionary GPURenderPassDepthStencilAttachment {
+    required GPUTextureOrGPUTextureView view;
+    float depthClearValue;
+    GPULoadOp depthLoadOp;
+    GPUStoreOp depthStoreOp;
+    boolean depthReadOnly = false;
+    [EnforceRange] unsigned long stencilClearValue = 0;
+    GPULoadOp stencilLoadOp;
+    GPUStoreOp stencilStoreOp;
+    boolean stencilReadOnly = false;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpurenderpasscolorattachment
+dictionary GPURenderPassColorAttachment {
+    required GPUTextureOrGPUTextureView view;
+    [EnforceRange] unsigned long depthSlice;
+    GPUTextureOrGPUTextureView resolveTarget;
+    GPUColor clearValue;
+    required GPULoadOp loadOp;
+    required GPUStoreOp storeOp;
+};
+
+// NB: The spec writes the union out where it is used; a typedef names it for the Rust bindings.
+typedef (GPUTexture or GPUTextureView) GPUTextureOrGPUTextureView;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpucolordict
+dictionary GPUColorDict {
+    required double r;
+    required double g;
+    required double b;
+    required double a;
+};
+
+// https://gpuweb.github.io/gpuweb/#typedefdef-gpucolor
+typedef (sequence<double> or GPUColorDict) GPUColor;
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpuloadop
+enum GPULoadOp {
+    "load",
+    "clear",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpustoreop
+enum GPUStoreOp {
+    "store",
+    "discard",
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gputexelcopybufferlayout
+dictionary GPUTexelCopyBufferLayout {
+    GPUSize64 offset = 0;
+    [EnforceRange] unsigned long bytesPerRow;
+    [EnforceRange] unsigned long rowsPerImage;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gputexelcopybufferinfo
+dictionary GPUTexelCopyBufferInfo : GPUTexelCopyBufferLayout {
+    required GPUBuffer buffer;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gputexelcopytextureinfo
+dictionary GPUTexelCopyTextureInfo {
+    required GPUTexture texture;
+    [EnforceRange] unsigned long mipLevel = 0;
+    GPUOrigin3D origin = {};
+    GPUTextureAspect aspect = "all";
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpuorigin3ddict
+dictionary GPUOrigin3DDict {
+    [EnforceRange] unsigned long x = 0;
+    [EnforceRange] unsigned long y = 0;
+    [EnforceRange] unsigned long z = 0;
+};
+
+// https://gpuweb.github.io/gpuweb/#typedefdef-gpuorigin3d
+typedef (sequence<[EnforceRange] unsigned long> or GPUOrigin3DDict) GPUOrigin3D;

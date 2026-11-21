@@ -1,0 +1,6 @@
+// https://gpuweb.github.io/gpuweb/#gpucommandbuffer
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUCommandBuffer {
+};
+
+GPUCommandBuffer includes GPUObjectBase;

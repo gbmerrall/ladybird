@@ -25,7 +25,7 @@ class HTMLCanvasElement final
     GC_DECLARE_ALLOCATOR(HTMLCanvasElement);
 
 public:
-    using RenderingContext = Variant<GC::Ref<CanvasRenderingContext2D>, GC::Ref<WebGL::WebGLRenderingContext>, GC::Ref<WebGL::WebGL2RenderingContext>, GC::Ref<ImageBitmapRenderingContext>, Empty>;
+    using RenderingContext = Variant<GC::Ref<CanvasRenderingContext2D>, GC::Ref<WebGL::WebGLRenderingContext>, GC::Ref<WebGL::WebGL2RenderingContext>, GC::Ref<ImageBitmapRenderingContext>, GC::Ref<WebGPU::GPUCanvasContext>, Empty>;
 
     virtual ~HTMLCanvasElement() override;
 
@@ -107,11 +107,12 @@ private:
     template<typename ContextType>
     JS::ThrowCompletionOr<HasOrCreatedContext> create_webgl_context(JS::Value options);
     HasOrCreatedContext create_bitmap_renderer_context(bool alpha);
+    HasOrCreatedContext create_webgpu_context();
     void reset_context_to_default_state();
     void notify_context_about_canvas_size_change();
     void did_commit_placeholder_frame(Gfx::IntSize, bool origin_clean);
 
-    Variant<GC::Ref<HTML::CanvasRenderingContext2D>, GC::Ref<WebGL::WebGLRenderingContext>, GC::Ref<WebGL::WebGL2RenderingContext>, GC::Ref<ImageBitmapRenderingContext>, Empty> m_context;
+    RenderingContext m_context;
     bool m_canvas_content_dirty { false };
 
     bool m_is_placeholder { false };

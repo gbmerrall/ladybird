@@ -1,5 +1,4 @@
-// FIXME: The RenderingContext union is missing GPUCanvasContext.
-typedef (CanvasRenderingContext2D or ImageBitmapRenderingContext or WebGLRenderingContext or WebGL2RenderingContext) RenderingContext;
+typedef (CanvasRenderingContext2D or ImageBitmapRenderingContext or WebGLRenderingContext or WebGL2RenderingContext or GPUCanvasContext) RenderingContext;
 
 // https://html.spec.whatwg.org/multipage/semantics.html#htmlcanvaselement
 [Exposed=Window]

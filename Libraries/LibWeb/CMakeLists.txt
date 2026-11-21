@@ -907,6 +907,9 @@ set(SOURCES
     WebGL/RemoteWebGLTransportFFI.cpp
     WebGL/WebGLContextAttributes.cpp
     WebGL/WebGLRenderingContextBase.cpp
+    WebGPU/GPU.cpp
+    WebGPU/GPUCanvasContext.cpp
+    WebGPU/WebGPUClient.cpp
     WebIDL/AbstractOperations.cpp
     WebIDL/AsyncIterator.cpp
     WebIDL/Buffers.cpp

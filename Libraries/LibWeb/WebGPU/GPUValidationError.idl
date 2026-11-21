@@ -1,0 +1,5 @@
+// https://gpuweb.github.io/gpuweb/#gpuvalidationerror
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUValidationError : GPUError {
+    constructor(DOMString message);
+};

@@ -6,6 +6,9 @@ interface Navigator {
     // https://w3c.github.io/clipboard-apis/#navigator-interface
     [SecureContext, SameObject] readonly attribute Clipboard clipboard;
 
+    // https://gpuweb.github.io/gpuweb/#navigator-gpu
+    [SecureContext, SameObject] readonly attribute GPU gpu;
+
     // https://w3c.github.io/geolocation/#navigator_interface
     [SameObject] readonly attribute Geolocation geolocation;
 

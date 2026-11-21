@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<script src="include.js"></script>
+<script>
+  asyncTest(async done => {
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+    device.onuncapturederror = event => println("uncaptured: " + event.error.constructor.name);
+
+    // Data written at creation, by the queue, and copied, comes back through a mapping for reading.
+    const source = device.createBuffer({ size: 16, usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST, mappedAtCreation: true });
+    println("mapped at creation: " + source.mapState);
+    new Uint8Array(source.getMappedRange()).set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+    source.unmap();
+    println("after unmap: " + source.mapState);
+    device.queue.writeBuffer(source, 4, new Uint8Array([50, 51, 52, 53, 54, 55, 56, 57]), 2, 4);
+
+    const readable = device.createBuffer({ size: 16, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+    println("size: " + readable.size + ", usage: " + readable.usage);
+    const encoder = device.createCommandEncoder();
+    encoder.copyBufferToBuffer(source, 0, readable, 0, 16);
+    device.queue.submit([encoder.finish()]);
+    await device.queue.onSubmittedWorkDone();
+    println("work done");
+
+    const mapping = readable.mapAsync(GPUMapMode.READ);
+    println("while mapping: " + readable.mapState);
+    await mapping;
+    println("mapped: " + readable.mapState);
+    const range = readable.getMappedRange();
+    println("contents: " + Array.from(new Uint8Array(range)).join(","));
+    try {
+      readable.getMappedRange(0, 8);
+      println("FAIL: an overlapping range was returned");
+    } catch (error) {
+      println("an overlapping range: " + error.name);
+    }
+    readable.unmap();
+    println("detached at unmap: " + range.byteLength);
+
+    try {
+      readable.getMappedRange();
+      println("FAIL: an unmapped buffer returned a range");
+    } catch (error) {
+      println("getMappedRange of an unmapped buffer: " + error.name);
+    }
+
+    // Unmapping while a mapping is pending rejects it.
+    const pending = readable.mapAsync(GPUMapMode.READ);
+    readable.unmap();
+    try {
+      await pending;
+      println("FAIL: the pending mapping resolved");
+    } catch (error) {
+      println("unmapped while pending: " + error.name);
+    }
+
+    try {
+      await readable.mapAsync(GPUMapMode.WRITE);
+      println("FAIL: a buffer without MAP_WRITE was mapped for writing");
+    } catch (error) {
+      println("map for writing without MAP_WRITE: " + error.name);
+    }
+
+    try {
+      device.createBuffer({ size: 6, usage: GPUBufferUsage.COPY_DST, mappedAtCreation: true });
+      println("FAIL: a size that is not a multiple of 4 was mapped at creation");
+    } catch (error) {
+      println("mapped at creation with a size of 6: " + error.name);
+    }
+
+    // What script writes into a mapping for writing reaches the buffer.
+    const writable = device.createBuffer({ size: 8, usage: GPUBufferUsage.MAP_WRITE | GPUBufferUsage.COPY_SRC });
+    await writable.mapAsync(GPUMapMode.WRITE, 0, 8);
+    new Uint8Array(writable.getMappedRange(0, 8)).set([7, 7, 7, 7], 4);
+    writable.unmap();
+    const copy = device.createCommandEncoder();
+    copy.copyBufferToBuffer(writable, readable, 8);
+    device.queue.submit([copy.finish()]);
+    await readable.mapAsync(GPUMapMode.READ, 0, 8);
+    println("written through a mapping: " + Array.from(new Uint8Array(readable.getMappedRange(0, 8))).join(","));
+    readable.unmap();
+
+    // A queue write that is not a multiple of 4 bytes throws.
+    try {
+      device.queue.writeBuffer(source, 0, new Uint8Array(3));
+      println("FAIL: a write of 3 bytes was accepted");
+    } catch (error) {
+      println("a write of 3 bytes: " + error.name);
+    }
+    done();
+  });
+</script>

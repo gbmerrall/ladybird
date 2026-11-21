@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html class="reftest-wait">
+<link rel="match" href="../expected/webgpu-clear-and-draw-ref.html">
+<style>
+    body {
+        margin: 0;
+    }
+    canvas {
+        display: block;
+    }
+</style>
+<canvas id="canvas" width="100" height="100"></canvas>
+<script>
+    // Clears to blue, then draws two red triangles that cover the left half of the canvas. Their edges fall on pixel
+    // boundaries, so the result matches plain boxes exactly.
+    const shader = `
+        @vertex
+        fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
+            var positions = array<vec2f, 6>(
+                vec2f(-1.0, -1.0), vec2f(0.0, -1.0), vec2f(-1.0, 1.0),
+                vec2f(-1.0, 1.0), vec2f(0.0, -1.0), vec2f(0.0, 1.0));
+            return vec4f(positions[i], 0.0, 1.0);
+        }
+
+        @fragment
+        fn fs() -> @location(0) vec4f {
+            return vec4f(1.0, 0.0, 0.0, 1.0);
+        }
+    `;
+
+    function done() {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (window.internals)
+                    internals.signalTestIsDone("PASS");
+                else
+                    document.documentElement.classList.remove("reftest-wait");
+            });
+        });
+    }
+
+    (async () => {
+        const adapter = await navigator.gpu.requestAdapter();
+        const device = await adapter.requestDevice();
+        const context = canvas.getContext("webgpu");
+        const format = navigator.gpu.getPreferredCanvasFormat();
+        context.configure({ device, format });
+
+        const module = device.createShaderModule({ code: shader });
+        const pipeline = device.createRenderPipeline({
+            layout: "auto",
+            vertex: { module },
+            fragment: { module, targets: [{ format }] },
+        });
+
+        const encoder = device.createCommandEncoder();
+        const pass = encoder.beginRenderPass({
+            colorAttachments: [{
+                view: context.getCurrentTexture().createView(),
+                clearValue: [0, 0, 1, 1],
+                loadOp: "clear",
+                storeOp: "store",
+            }],
+        });
+        pass.setPipeline(pipeline);
+        pass.draw(6);
+        pass.end();
+        device.queue.submit([encoder.finish()]);
+        done();
+    })().catch(error => {
+        document.body.textContent = "FAIL: " + error;
+        done();
+    });
+</script>

@@ -1,0 +1,292 @@
+// https://gpuweb.github.io/gpuweb/#gpudevice
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUDevice : EventTarget {
+    [SameObject] readonly attribute GPUSupportedFeatures features;
+    [SameObject] readonly attribute GPUSupportedLimits limits;
+    [SameObject] readonly attribute GPUAdapterInfo adapterInfo;
+
+    [SameObject] readonly attribute GPUQueue queue;
+
+    undefined destroy();
+
+    readonly attribute Promise<GPUDeviceLostInfo> lost;
+
+    undefined pushErrorScope(GPUErrorFilter filter);
+    [CreatesPromise] Promise<GPUError?> popErrorScope();
+
+    attribute EventHandler onuncapturederror;
+
+    GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
+    GPUTexture createTexture(GPUTextureDescriptor descriptor);
+    GPUSampler createSampler(optional GPUSamplerDescriptor descriptor = {});
+
+    GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor);
+    GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor);
+    GPUBindGroup createBindGroup(GPUBindGroupDescriptor descriptor);
+
+    GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
+    GPUComputePipeline createComputePipeline(GPUComputePipelineDescriptor descriptor);
+    GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
+    [CreatesPromise] Promise<GPUComputePipeline> createComputePipelineAsync(GPUComputePipelineDescriptor descriptor);
+    [CreatesPromise] Promise<GPURenderPipeline> createRenderPipelineAsync(GPURenderPipelineDescriptor descriptor);
+    GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
+    GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
+
+    GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor);
+};
+
+GPUDevice includes GPUObjectBase;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpushadermoduledescriptor
+dictionary GPUShaderModuleDescriptor : GPUObjectDescriptorBase {
+    required USVString code;
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpuautolayoutmode
+enum GPUAutoLayoutMode {
+    "auto",
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpupipelinedescriptorbase
+dictionary GPUPipelineDescriptorBase : GPUObjectDescriptorBase {
+    required (GPUPipelineLayout or GPUAutoLayoutMode) layout;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpurenderpipelinedescriptor
+dictionary GPURenderPipelineDescriptor : GPUPipelineDescriptorBase {
+    required GPUVertexState vertex;
+    GPUPrimitiveState primitive = {};
+    GPUDepthStencilState depthStencil;
+    GPUMultisampleState multisample = {};
+    GPUFragmentState fragment;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpuprogrammablestage
+// FIXME: The spec's default for constants is {}, which the Rust bindings cannot express yet.
+dictionary GPUProgrammableStage {
+    required GPUShaderModule module;
+    USVString entryPoint;
+    record<USVString, GPUPipelineConstantValue> constants;
+};
+
+// https://gpuweb.github.io/gpuweb/#typedefdef-gpupipelineconstantvalue
+typedef double GPUPipelineConstantValue;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpuvertexstate
+dictionary GPUVertexState : GPUProgrammableStage {
+    sequence<GPUVertexBufferLayout?> buffers = [];
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpuvertexbufferlayout
+dictionary GPUVertexBufferLayout {
+    required GPUSize64 arrayStride;
+    GPUVertexStepMode stepMode = "vertex";
+    required sequence<GPUVertexAttribute> attributes;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpuvertexattribute
+dictionary GPUVertexAttribute {
+    required GPUVertexFormat format;
+    required GPUSize64 offset;
+    required [EnforceRange] unsigned long shaderLocation;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpufragmentstate
+dictionary GPUFragmentState : GPUProgrammableStage {
+    required sequence<GPUColorTargetState?> targets;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpucolortargetstate
+dictionary GPUColorTargetState {
+    required GPUTextureFormat format;
+    GPUBlendState blend;
+    [EnforceRange] unsigned long writeMask = 0xF;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpublendstate
+dictionary GPUBlendState {
+    required GPUBlendComponent color;
+    required GPUBlendComponent alpha;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpublendcomponent
+dictionary GPUBlendComponent {
+    GPUBlendOperation operation = "add";
+    GPUBlendFactor srcFactor = "one";
+    GPUBlendFactor dstFactor = "zero";
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpuprimitivestate
+dictionary GPUPrimitiveState {
+    GPUPrimitiveTopology topology = "triangle-list";
+    GPUIndexFormat stripIndexFormat;
+    GPUFrontFace frontFace = "ccw";
+    GPUCullMode cullMode = "none";
+    boolean unclippedDepth = false;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpudepthstencilstate
+dictionary GPUDepthStencilState {
+    required GPUTextureFormat format;
+    boolean depthWriteEnabled;
+    GPUCompareFunction depthCompare;
+    GPUStencilFaceState stencilFront = {};
+    GPUStencilFaceState stencilBack = {};
+    [EnforceRange] unsigned long stencilReadMask = 0xFFFFFFFF;
+    [EnforceRange] unsigned long stencilWriteMask = 0xFFFFFFFF;
+    [EnforceRange] long depthBias = 0;
+    float depthBiasSlopeScale = 0;
+    float depthBiasClamp = 0;
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpustencilfacestate
+dictionary GPUStencilFaceState {
+    GPUCompareFunction compare = "always";
+    GPUStencilOperation failOp = "keep";
+    GPUStencilOperation depthFailOp = "keep";
+    GPUStencilOperation passOp = "keep";
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpumultisamplestate
+dictionary GPUMultisampleState {
+    [EnforceRange] unsigned long count = 1;
+    [EnforceRange] unsigned long mask = 0xFFFFFFFF;
+    boolean alphaToCoverageEnabled = false;
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpuprimitivetopology
+enum GPUPrimitiveTopology {
+    "point-list",
+    "line-list",
+    "line-strip",
+    "triangle-list",
+    "triangle-strip",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpuvertexformat
+enum GPUVertexFormat {
+    "uint8",
+    "uint8x2",
+    "uint8x4",
+    "sint8",
+    "sint8x2",
+    "sint8x4",
+    "unorm8",
+    "unorm8x2",
+    "unorm8x4",
+    "snorm8",
+    "snorm8x2",
+    "snorm8x4",
+    "uint16",
+    "uint16x2",
+    "uint16x4",
+    "sint16",
+    "sint16x2",
+    "sint16x4",
+    "unorm16",
+    "unorm16x2",
+    "unorm16x4",
+    "snorm16",
+    "snorm16x2",
+    "snorm16x4",
+    "float16",
+    "float16x2",
+    "float16x4",
+    "float32",
+    "float32x2",
+    "float32x3",
+    "float32x4",
+    "uint32",
+    "uint32x2",
+    "uint32x3",
+    "uint32x4",
+    "sint32",
+    "sint32x2",
+    "sint32x3",
+    "sint32x4",
+    "unorm10-10-10-2",
+    "unorm8x4-bgra",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpuvertexstepmode
+enum GPUVertexStepMode {
+    "vertex",
+    "instance",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpuindexformat
+enum GPUIndexFormat {
+    "uint16",
+    "uint32",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpufrontface
+enum GPUFrontFace {
+    "ccw",
+    "cw",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpucullmode
+enum GPUCullMode {
+    "none",
+    "front",
+    "back",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpublendfactor
+enum GPUBlendFactor {
+    "zero",
+    "one",
+    "src",
+    "one-minus-src",
+    "src-alpha",
+    "one-minus-src-alpha",
+    "dst",
+    "one-minus-dst",
+    "dst-alpha",
+    "one-minus-dst-alpha",
+    "src-alpha-saturated",
+    "constant",
+    "one-minus-constant",
+    "src1",
+    "one-minus-src1",
+    "src1-alpha",
+    "one-minus-src1-alpha",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpublendoperation
+enum GPUBlendOperation {
+    "add",
+    "subtract",
+    "reverse-subtract",
+    "min",
+    "max",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpucomparefunction
+enum GPUCompareFunction {
+    "never",
+    "less",
+    "equal",
+    "less-equal",
+    "greater",
+    "not-equal",
+    "greater-equal",
+    "always",
+};
+
+// https://gpuweb.github.io/gpuweb/#enumdef-gpustenciloperation
+enum GPUStencilOperation {
+    "keep",
+    "zero",
+    "replace",
+    "invert",
+    "increment-clamp",
+    "decrement-clamp",
+    "increment-wrap",
+    "decrement-wrap",
+};
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpucommandencoderdescriptor
+dictionary GPUCommandEncoderDescriptor : GPUObjectDescriptorBase {
+};

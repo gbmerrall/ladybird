@@ -1,0 +1,12 @@
+// https://gpuweb.github.io/gpuweb/#gpucomputepipeline
+[Exposed=Window, SecureContext, ImplementedIn=Rust]
+interface GPUComputePipeline {
+    [NewObject] GPUBindGroupLayout getBindGroupLayout(unsigned long index);
+};
+
+GPUComputePipeline includes GPUObjectBase;
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpucomputepipelinedescriptor
+dictionary GPUComputePipelineDescriptor : GPUPipelineDescriptorBase {
+    required GPUProgrammableStage compute;
+};
